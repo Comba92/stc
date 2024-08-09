@@ -43,16 +43,16 @@ void str_dbg(Str s) {
     str_msg("", s);
 }
 
-//TODO: edge cases
+//TODO: size_t is unsigned, so if you pass a negative number for any reason, KABOOM! Be careful.
 Str slice_new(char* s, size_t start, size_t end) {
+    assert("indexes were negatives" && ((int) start) >= 0 && ((int) end) >= 0 );
+
     if (start >= end) { return slice_empty(); };
 
-    size_t len = strlen(s);
-    if (start > len) { return slice_empty(); }
-
     Str res = {};
-    res.data = s + MAX(0, start);
-    res.len = MIN(end - start, len);
+    start = MAX(0, start);
+    res.data = s + start;
+    res.len = end - start;
     return res;
 }
 
@@ -92,7 +92,7 @@ int str_cmp(Str a, Str b) {
     if (a.len < b.len) {
         Str temp = a;
         a = b;
-        b = a;
+        b = temp;
     }
 
     for (size_t i=0; i<a.len; ++i) {
@@ -116,7 +116,24 @@ Str str_take_left(Str s, size_t len) {
 }
 
 Str str_take_right(Str s, size_t len) {
+    if (len > s.len) return s;
     return str_substr(s, s.len - len, s.len);
+}
+
+Str str_take_while(Str s, CharPredicate p) {
+    size_t len = 0;
+    foreach(char, s, c, { if (p(*c)) { break; } len+=1; });
+    return str_take_left(s, len);
+}
+
+Str str_take_until_match(Str s, Str target) {
+    Str window = str_substr(s, 0, target.len);
+    size_t i = 0;
+    for (; i + target.len < s.len && !str_eq(window, target); ++i) {
+        window.data += 1;
+    }
+
+    return str_take_left(s, i);
 }
 
 Str str_chop_left(Str s, size_t len) {
@@ -124,6 +141,7 @@ Str str_chop_left(Str s, size_t len) {
 }
 
 Str str_chop_right(Str s, size_t len) {
+    if (len > s.len) return slice_empty();
     return str_substr(s, 0, s.len - len);
 }
 
@@ -149,22 +167,6 @@ Str str_trim_end(Str s) {
 
 Str str_trim(Str s) {
     return str_trim_end(str_trim_start(s));
-}
-
-Str str_take_until_char(Str s, char target) {
-    size_t len = 0;
-    foreach(char, s, c, { if (*c == target) { break; } len+=1; });
-    return str_take_left(s, len);
-}
-
-Str str_take_until_str(Str s, Str target) {
-    Str window = str_substr(s, 0, target.len);
-    size_t i = 0;
-    for (; i + target.len < s.len && !str_eq(window, target); ++i) {
-        window.data += 1;
-    }
-
-    return str_take_left(s, i);
 }
 
 bool str_starts_with(Str s, Str target) {
