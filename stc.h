@@ -21,18 +21,18 @@
     } name;                         \
 
 
-#define list_push(list, value)                                      \
+#define list_push(list, value)                                          \
     do {                                                                \
-        if ( (list).len == 0 ) {                                     \
-            (list).capacity = _LIST_BASE_CAPACITY;                    \
-            (list).data = malloc(sizeof(value) * (list).capacity);    \
+        if ( (list).len == 0 ) {                                        \
+            (list).capacity = _LIST_BASE_CAPACITY;                      \
+            (list).data = malloc(sizeof(value) * (list).capacity);      \
         }                                                               \
-        if ( (list).len >= (list).capacity ) {                      \
-            (list).capacity *= 2;                                      \
+        if ( (list).len >= (list).capacity ) {                          \
+            (list).capacity *= 2;                                       \
             (list).data = realloc((list).data, sizeof(value) * (list).capacity);      \
         }                                                               \
-        (list).data[(list).len] = (value);                          \
-        (list).len += 1;                                             \
+        (list).data[(list).len] = (value);                              \
+        (list).len += 1;                                                \
     } while(0)
     
 #define list_pop(list) ( (list).len > 0 ? (list).data[--(list).len] : 0 )                                                        \

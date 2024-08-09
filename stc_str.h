@@ -279,7 +279,11 @@ StrList str_lines(Str s) {
 list_define(char, String);
 
 Str slice_from_str(String s) {
-    return slice_new(s.data, 0, s.len);
+    // easy way: 
+    // return str_new(s.data, 0, s.len);
+
+    // Get String address, cast to Slice address, derefence it
+    return *((Str*) (&s));
 }
 
 String str_from_cstring(char* s) {
@@ -295,7 +299,7 @@ String str_from_cstring(char* s) {
 
 String str_from_slice(Str s) {
     String res = {0};
-    foreach(char, res, c, { list_push(res, *c); });
+    foreach(char, s, c, { list_push(res, *c); });
     return res;
 }
 
