@@ -12,21 +12,27 @@
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 
+// Slice, or StringView. Lightweight way to reference an allocated or static String with a length.
+typedef struct CharSlice {
+    char* data;
+    size_t len;
+} Str;
 
-slice_define(char, Str);
 list_define(Str, StrList);
+list_define(int, IntList);
 
 typedef int (*CharPredicate) (int);
 typedef bool (*StrPredicate) (Str);
 
+// Returns an empty slice, pointing to null.
 Str slice_empty() {
     Str res = {};
-    res.data = "";
+    res.data = NULL;
     res.len = 0;
     return res;
 }
 
-// DANGEROUS: must be freed
+// Returns a new heap-allocated ZString, which must be freed.
 char* cstr(Str s) {
     char* ptr = malloc(sizeof(char) * (s.len+1));
     foreach(char, s, c, {ptr[i] = *c; });
@@ -57,6 +63,7 @@ Str slice_new(char* s, size_t start, size_t end) {
     return res;
 }
 
+// Returns a slice from a ZString.
 Str str(char* s) {
     return slice_new(s, 0, strlen(s));
 }
@@ -133,7 +140,7 @@ Str str_take_while(Str s, CharPredicate p) {
 Str str_take_until_match(Str s, Str target) {
     Str window = str_substr(s, 0, target.len);
     size_t i = 0;
-    for (; i + target.len < s.len; ++i) {
+    for (; i + target.len <= s.len; ++i) {
         if (str_eq(window, target)) return str_take_left(s, i);
         window.data += 1;
     }
@@ -162,7 +169,7 @@ Str str_chop_right(Str s, size_t len) {
 Str str_chop_until_match(Str s, Str target) {
     Str window = str_substr(s, 0, target.len);
     size_t i = 0;
-    for (; i + target.len < s.len; ++i) {
+    for (; i + target.len <= s.len; ++i) {
         if (str_eq(window, target)) return str_chop_left(s, i + target.len);
         window.data += 1;
     }
@@ -226,28 +233,28 @@ bool str_ends_with(Str s, Str target) {
     return str_eq(str_take_right(s, target.len), target);
 }
 
-Str str_match(Str s, Str pattern) {
-    Str window = str_substr(s, 0, pattern.len);
+int str_match(Str s, Str target) {
+    Str window = str_substr(s, 0, target.len);
 
-    for (int i=0; i + pattern.len < s.len; ++i) {
-        if (str_eq(window, pattern)) {
-            return window;
+    for (int i=0; i + target.len <= s.len; ++i) {
+        if (str_eq(window, target)) {
+            return i;
         }
 
         window.data += 1;
     }
 
-    return slice_empty();
+    return -1;
 }
 
-StrList str_match_all(Str s, Str pattern) {
-    StrList matches = {0};
+IntList str_match_all(Str s, Str target) {
+    IntList matches = {0};
 
-    Str window = str_substr(s, 0, pattern.len);
+    Str window = str_substr(s, 0, target.len);
 
-    for (int i=0; i + pattern.len < s.len; ++i) {
-        if (str_eq(window, pattern)) {
-            list_push(matches, window);
+    for (int i=0; i + target.len <= s.len; ++i) {
+        if (str_eq(window, target)) {
+            list_push(matches, i);
         }
 
         window.data += 1;
@@ -276,8 +283,18 @@ StrList str_lines(Str s) {
 
 // === HEAP STRINGS === //
 
-list_define(char, String);
+// Heap-allocated String. Can be edited and appended. Must be freed.
+typedef struct CharList {
+    char* data;
+    size_t len;
+    size_t capacity;
+    /*  Slice for easy access. Must be set every time a succession of pushes is done,
+     *  as it might realloc the string, changing its address.
+     */
+    Str slice;
+} String;
 
+// Returns a slice from an owned String. This value is also hold in the slice field.
 Str slice_from_str(String s) {
     // easy way: 
     // return str_new(s.data, 0, s.len);
@@ -294,12 +311,15 @@ String str_from_cstring(char* s) {
         list_push(res, s[i]);
     }
 
+    res.slice = slice_from_str(res);
     return res;
 }
 
 String str_from_slice(Str s) {
     String res = {0};
     foreach(char, s, c, { list_push(res, *c); });
+
+    res.slice = slice_from_str(res);
     return res;
 }
 
@@ -307,26 +327,43 @@ void str_free(String* s) {
     list_free(*s);
 }
 
+//TODO: convert all String arguments to slices?
 String str_copy(String s) {
     String res = {0};
     foreach(char, s, c, { list_push(res, *c); });
+
+    res.slice = slice_from_str(res);
     return res;
 }
 
 String str_append(String src, Str other) {
     String res = str_copy(src);
-    foreach(char, other, c, { list_push(res, *c); });
+    list_concat(char, res, other);
+
+    res.slice = slice_from_str(res);
     return res;
 }
 
-String str_insert(String src, Str other, int start) {
+String str_insert(String src, size_t start, Str other) {
     String res = {0};
     size_t i = 0;
     while (i < start) { list_push(res, src.data[i++]); }
     foreach(char, other, c, { list_push(res, *c); });
     while (i < src.len) { list_push(res, src.data[i++]); }
 
+    res.slice = slice_from_str(res);
     return res; 
+}
+
+String str_remove(String src, size_t start, size_t len) {
+    String res = {0};
+    size_t i = 0;
+    while (i < start) { list_push(res, src.data[i++]); }
+    i += len;
+    while (i < src.len) { list_push(res, src.data[i++]); }
+
+    res.slice = slice_from_str(res);
+    return res;
 }
 
 bool str_set(String* dst, char c, int i) {
@@ -335,8 +372,8 @@ bool str_set(String* dst, char c, int i) {
     return true;
 }
 
-// edits in-place a string after start. will edit even until s doesn't fit
-bool str_edit(String* dst, Str s, int start)  {
+// edits in-place a string after start. will edit until s doesn't fit
+bool str_edit(String* dst, int start, Str s)  {
     if (start > dst->len) return false;
     for(size_t i=start; i < dst->len; ++i) {
         dst->data[i] = s.data[i - start];
@@ -345,9 +382,20 @@ bool str_edit(String* dst, Str s, int start)  {
     return true;
 }
 
+// edits in-place a string after start. will edit until s doesn't fit
+bool str_erase(String* dst, int start, int len)  {
+    if (start + len > dst->len) return false;
+
+    //TODO: implement this
+
+    return false;
+}
+
 String str_map(Str s, CharPredicate p) {
     String res = {0};
     foreach(char, s, c, { *c = (char) p((int)*c); list_push(res, *c); });
+    
+    res.slice = slice_from_str(res);
     return res;
 }
 
@@ -368,38 +416,35 @@ String str_repeat(Str s, size_t reps) {
         res = new_res;
     }
 
+    res.slice = slice_from_str(res);
     return res;
 }
 
 String str_replace(String s, Str target, Str replacing) {
-    Str window = str_substr(slice_from_str(s), 0, target.len);
+    int match = str_match(s.slice, target);
+    if (match == -1) return s;
 
-    for (int i=0; i + target.len < s.len; ++i) {
-        if (str_eq(window, target)) {
-            return str_insert(s, replacing, i);
-        }
+    String removed = str_remove(s, match, target.len);
+    String replaced = str_insert(removed, match, replacing);
+    str_free(&removed);
 
-        window.data += 1;
-    }
-
-    return (String) {0};
+    replaced.slice = slice_from_str(replaced);
+    return replaced;
 }
 
-String str_replaceall(String* s, Str target, Str replacing) {
-    String res = {0};
+String str_replace_all(String s, Str target, Str replacing) {
+    String res = str_copy(s);
+    String tmp = {0};
 
-    Str window = str_substr(slice_from_str(*s), 0, target.len);
-
-    for (int i=0; i + target.len < s->len; ++i) {
-        if (str_eq(window, target)) {
-            String new_res = str_insert(res, replacing, i);
-            str_free(&res);
-            res = new_res;
-        }
-
-        else window.data += 1;
+    // Replace one at a time, stop when the last replace hasn't edited the string
+    while(!str_eq(res.slice, slice_from_str(tmp))) {
+        String replaced = str_replace(res, target, replacing);
+        tmp = res;
+        res = replaced;
     }
 
+    str_free(&tmp);
+    res.slice = slice_from_str(res);
     return res;
 }
 
@@ -413,6 +458,8 @@ String str_join(StrList sl, char join) {
 
     // pop last char
     list_pop(res);
+
+    res.slice = slice_from_str(res);
     return res;
 }
 

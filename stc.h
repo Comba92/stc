@@ -21,6 +21,11 @@
     } name;                         \
 
 
+/*  Pushes the relative value type to the end of the typed list.
+ *  Will be reallocated if capacity is full.
+ *  @param list: the typed list to push on.
+ *  @param value: the value to push. Must be of the same type of the typed list. 
+ */
 #define list_push(list, value)                                          \
     do {                                                                \
         if ( (list).len == 0 ) {                                        \
@@ -35,8 +40,11 @@
         (list).len += 1;                                                \
     } while(0)
     
+
+
 #define list_pop(list) ( (list).len > 0 ? (list).data[--(list).len] : 0 )                                                        \
 
+// Frees the typed list, and sets its length to 0.
 #define list_free(list)           \
     do {                            \
         if ((list).len != 0) {   \
@@ -46,6 +54,12 @@
     } while (0)                     \
 
 // NOTE TO SELF: always pass an already computed list as a parameter, or else it will be recomputed each iter
+/*  Generic foreach for typed lists. 
+ *  @param type: the type of the list.
+ *  @param list: the typed list.
+ *  @param elem: a symbol, the name of the current value. It will get a pointer to the value.
+ *  @param body: a statement to execute for each iteration.
+ */
 #define foreach(type, list, elem, body)    \
     for (size_t i = 0;                      \
          i < (list).len;                 \
@@ -55,19 +69,23 @@
         body;                               \
     }                                       \
 
-// concats list in-place
+// Concats the list_from to list_to in-place
 #define list_concat(type, list_to, list_from)    \
     do {                                            \
         foreach(type, (list_from), it, { list_push((list_to), (*it)); }); \
     } while(0)                                      \
 
+// @param found: an already defined bool value must be passed here, which will hold the result. 
 #define list_contains(type, list, target, found) \
     do {                                           \
         found = false;                             \
         foreach(type, (list), elem, { if (*elem == (target)) { found = true; break; } }); \
     } while(0)                                    \
 
-// filters list in-place the list
+/*  Filters the list in-place
+ *  @param elem: a symbol, the name of the current value. It will get a pointer to the value.
+ *  @param condition: a bool expression, should be used *elem in it.
+ */
 #define list_filter(type, list, elem, condition)  \
     do {                                            \
         int last_found = 0;                         \
