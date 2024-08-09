@@ -26,6 +26,7 @@ Str slice_empty() {
     return res;
 }
 
+// DANGEROUS: must be freed
 char* cstr(Str s) {
     char* ptr = malloc(sizeof(char) * (s.len+1));
     foreach(char, s, c, {ptr[i] = *c; });
@@ -35,7 +36,7 @@ char* cstr(Str s) {
 
 void str_msg(char* msg, Str s) {
     char* dbg = cstr(s);
-    printf("%s > %s\n", msg, dbg);
+    printf("%s > \'%s\'\n", msg, dbg);
     free(dbg);
 }
 
@@ -45,7 +46,7 @@ void str_dbg(Str s) {
 
 //TODO: size_t is unsigned, so if you pass a negative number for any reason, KABOOM! Be careful.
 Str slice_new(char* s, size_t start, size_t end) {
-    assert("indexes were negatives" && ((int) start) >= 0 && ((int) end) >= 0 );
+    assert("created slice with negative indexes" && ((int) start) >= 0 && ((int) end) >= 0 );
 
     if (start >= end) { return slice_empty(); };
 
@@ -111,6 +112,9 @@ bool str_contains(Str s, char target) {
     return str_find(s, target) != -1;
 }
 
+
+//TODO: a lot of repetitions with take and chop, maybe factor out to a generic function?
+
 Str str_take_left(Str s, size_t len) {
     return str_substr(s, 0, len);
 }
@@ -129,11 +133,21 @@ Str str_take_while(Str s, CharPredicate p) {
 Str str_take_until_match(Str s, Str target) {
     Str window = str_substr(s, 0, target.len);
     size_t i = 0;
-    for (; i + target.len < s.len && !str_eq(window, target); ++i) {
+    for (; i + target.len < s.len; ++i) {
+        if (str_eq(window, target)) return str_take_left(s, i);
         window.data += 1;
     }
 
-    return str_take_left(s, i);
+    return s;
+}
+
+// TODO: make these better
+Str str_take_until_char(Str s, char c) {
+    char* tmp = malloc(sizeof(char)+1);
+    tmp[0] = c; tmp[1] = '\0';
+    Str res = str_take_until_match(s, str(tmp));
+    free(tmp);
+    return res;
 }
 
 Str str_chop_left(Str s, size_t len) {
@@ -145,24 +159,59 @@ Str str_chop_right(Str s, size_t len) {
     return str_substr(s, 0, s.len - len);
 }
 
+Str str_chop_until_match(Str s, Str target) {
+    Str window = str_substr(s, 0, target.len);
+    size_t i = 0;
+    for (; i + target.len < s.len; ++i) {
+        if (str_eq(window, target)) return str_chop_left(s, i + target.len);
+        window.data += 1;
+    }
+
+    return slice_empty();
+}
+
+//TODO: make this better
+Str str_chop_until_char(Str s, char c) {
+    char* tmp = malloc(sizeof(char)+1);
+    tmp[0] = c; tmp[1] = '\0';
+    Str res = str_chop_until_match(s, str(tmp));
+    free(tmp);
+    return res;
+}
+
+
+Str str_take_left_while(Str s, CharPredicate p) {
+    size_t i = 0;
+    while(i < s.len && p(s.data[i])) i += 1;
+    return str_take_left(s, i);
+}
+
+//TODO: make these better
+Str str_take_right_while(Str s, CharPredicate p) {
+    size_t i = s.len-1;
+    while(i >= 0 && p(s.data[i])) i -= 1;
+    return str_take_right(s, MAX(0, ((int) s.len) - i - 1));
+}
+
 Str str_chop_left_while(Str s, CharPredicate p) {
     size_t i = 0;
     while(i < s.len && p(s.data[i])) i += 1;
     return str_chop_left(s, i);
 }
 
+//TODO: make these better
 Str str_chop_right_while(Str s, CharPredicate p) {
-    size_t i = s.len;
+    int i = s.len-1;
     while(i >= 0 && p(s.data[i])) i -= 1;
-    return str_chop_right(s, s.len - i - 1);
+    return str_chop_right(s, MAX(0, ((int) s.len) - i - 1));
 }
 
 Str str_trim_start(Str s) {
-    return str_chop_left_while(s, &isspace);
+    return str_chop_left_while(s, isspace);
 }
 
 Str str_trim_end(Str s) {
-    return str_chop_right_while(s, &isspace);
+    return str_chop_right_while(s, isspace);
 }
 
 Str str_trim(Str s) {
@@ -191,7 +240,7 @@ Str str_match(Str s, Str pattern) {
     return slice_empty();
 }
 
-StrList str_matchall(Str s, Str pattern) {
+StrList str_match_all(Str s, Str pattern) {
     StrList matches = {0};
 
     Str window = str_substr(s, 0, pattern.len);
@@ -210,17 +259,20 @@ StrList str_matchall(Str s, Str pattern) {
 StrList str_split(Str s, char split) {
     StrList res = {0};
 
-    //TODO: to implement
-
+    while (s.len > 0) {
+        Str taken = str_take_until_char(s, split);
+        list_push(res, taken);
+        Str chopped = str_chop_until_char(s, split);
+        s = chopped;
+    }
+    
     return res;
 }
 
 StrList str_lines(Str s) {
     StrList sl = str_split(s, '\n');
-    foreach(Str, sl, sc, { sl.data[i] = str_trim(*sc); });
     return sl;
 }
-
 
 // === HEAP STRINGS === //
 

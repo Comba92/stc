@@ -4,8 +4,9 @@
 
 map_define(int, IntMap);
 
-int is_bang(int c) { return c != '!'; }
-int is_h(int c) { return c != 'H'; }
+int is_not_bang(int c) { return c != '!'; }
+int is_bang(int c) { return c == '!'; }
+int is_not_h(int c) { return c != 'H'; }
 int is_a(int c) { return c == 'a'; }
 
 int main() {
@@ -34,18 +35,26 @@ int main() {
     str_msg("Chop r", str_chop_right(hello, 2));
     str_msg("Chop r", str_chop_right(hello, 100));
 
-    str_dbg(str_chop_left_while(hello, is_bang));
-    str_dbg(str_chop_right_while(hello, is_bang));
+    str_dbg(str_chop_left_while(hello, is_not_bang));
+    str_dbg(str_chop_right_while(hello, is_not_bang));
 
     Str totrim = str("       dsa asadsa         ");
-    str_dbg(str_trim(totrim));
+    str_msg("Trim", str_trim_start(totrim));
+    str_msg("Trim", str_trim_end(totrim));
+
+    str_msg("Trim", str_trim_start(hello));
+    str_msg("Trim", str_trim_end(hello));
+
 
     assert(str_starts_with(hello, str("H")));
     assert(str_ends_with(hello, str("!!")));
 
     str_msg("Take while", str_take_while(totrim, is_a));
+    str_msg("Take while", str_take_while(totrim, is_bang));
     str_dbg(str_take_until_match(totrim, str("sad")));
     str_dbg(str_take_until_match(hello, str("llo")));
+    str_dbg(str_take_until_match(hello, str("!")));
+    str_dbg(str_take_until_match(hello, str("?")));
 
     Str ll = str("ll");
     Str ds = str("ds");
@@ -53,15 +62,22 @@ int main() {
     str_dbg(str_match(hello, ll));
     str_dbg(str_match(hello, str("fag")));
 
-    foreach(Str, str_matchall(totrim, ds), s, {
+    foreach(Str, str_match_all(totrim, ds), s, {
         str_msg("Match:", *s);
     });
 
-    Str lines = str("kill\nyour\nself!");
-    foreach(Str, str_lines(lines), s, {
+    str_msg("Take until", str_take_until_char(str("he\ny!"), '\n'));
+    str_msg("Take until", str_take_until_char(str("he\ny!"), '.'));
+    str_msg("Chop until", str_chop_until_char(str("he\ny!"), '\n'));
+    str_msg("Chop until", str_chop_until_char(str("he\ny!"), '.'));
+
+    StrList lines = str_lines(str("kill\nyour\nself!"));
+
+    foreach(Str, lines, s, {
         str_msg("Lines:", *s);
     });
 
+    str_msg("WHAT?", str_trim(str("self!")));
 
     StrList splitted = str_split(hello, 'l');
     foreach(Str, splitted, s, {

@@ -1,9 +1,11 @@
 {
     "files.associations": {
+        "*.c3": "rust",
         "typeinfo": "c",
         "vector": "c",
         "stdlib.h": "c",
         "stdbool.h": "c",
-        "type_traits": "c"
+        "type_traits": "c",
+        "compare": "c"
     },
 }

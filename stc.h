@@ -45,6 +45,7 @@
         }                           \
     } while (0)                     \
 
+// NOTE TO SELF: always pass an already computed list as a parameter, or else it will be recomputed each iter
 #define foreach(type, list, elem, body)    \
     for (size_t i = 0;                      \
          i < (list).len;                 \
