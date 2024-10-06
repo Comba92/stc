@@ -5,19 +5,19 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define _LIST_BASE_CAPACITY 32
+#include "stc_mem.h"
 
-#define list_define(type, name)    \
+#define list_define(type, name)     \
     typedef struct {                \
         type* data;                 \
-        size_t len;               \
+        size_t len;                 \
         size_t capacity;            \
     } name;                         \
 
 #define slice_define(type, name)    \
     typedef struct {                \
         type* data;                 \
-        size_t len;               \
+        size_t len;                 \
     } name;                         \
 
 
@@ -26,10 +26,12 @@
  *  @param list: the typed list to push on.
  *  @param value: the value to push. Must be of the same type of the typed list. 
  */
+
+#define LIST_BASE_CAPACITY 32
 #define list_push(list, value)                                          \
     do {                                                                \
         if ( (list).len == 0 ) {                                        \
-            (list).capacity = _LIST_BASE_CAPACITY;                      \
+            (list).capacity = LIST_BASE_CAPACITY;                       \
             (list).data = malloc(sizeof(value) * (list).capacity);      \
         }                                                               \
         if ( (list).len >= (list).capacity ) {                          \
@@ -39,17 +41,29 @@
         (list).data[(list).len] = (value);                              \
         (list).len += 1;                                                \
     } while(0)
-    
 
+#define arena_list_push(a, list, value)                                 \
+    do {                                                                \
+        if ( (list).len == 0 ) {                                        \
+            (list).capacity = LIST_BASE_CAPACITY;                       \
+            (list).data = arena_alloc((a), sizeof(value) * (list).capacity)                     \
+        }                                                               \
+        if ( (list).len >= (list).capacity ) {                          \
+            (list).capacity *= 2;                                       \
+            (list).data = arena_realloc((a), (list).data, sizeof(value) * (list).capacity)      \
+        }                                                               \
+        (list).data[(list).len] = (value);                              \
+        (list).len += 1;                                                \
+    } while(0)
 
 #define list_pop(list) ( (list).len > 0 ? (list).data[--(list).len] : 0 )                                                        \
 
 // Frees the typed list, and sets its length to 0.
-#define list_free(list)           \
+#define list_free(list)             \
     do {                            \
-        if ((list).len != 0) {   \
-            free((list).data);     \
-            (list).len = 0;      \
+        if ((list).len != 0) {      \
+            free((list).data);      \
+            (list).len = 0;         \
         }                           \
     } while (0)                     \
 
@@ -60,38 +74,38 @@
  *  @param elem: a symbol, the name of the current value. It will get a pointer to the value.
  *  @param body: a statement to execute for each iteration.
  */
-#define foreach(type, list, elem, body)    \
+#define foreach(type, list, elem, body)     \
     for (size_t i = 0;                      \
-         i < (list).len;                 \
+         i < (list).len;                    \
          ++i)                               \
     {                                       \
-        type* elem = &(list).data[i];      \
+        type* elem = &(list).data[i];       \
         body;                               \
     }                                       \
 
-// Concats the list_from to list_to in-place
-#define list_concat(type, list_to, list_from)    \
-    do {                                            \
-        foreach(type, (list_from), it, { list_push((list_to), (*it)); }); \
-    } while(0)                                      \
+// Concats list_from to list_to in-place
+#define list_concat(type, list_to, list_from)                               \
+    do {                                                                    \
+        foreach(type, (list_from), it, { list_push((list_to), (*it)); });   \
+    } while(0)                                                              \
 
 // @param found: an already defined bool value must be passed here, which will hold the result. 
-#define list_contains(type, list, target, found) \
-    do {                                           \
-        found = false;                             \
+#define list_contains(type, list, target, found)                                          \
+    do {                                                                                  \
+        found = false;                                                                    \
         foreach(type, (list), elem, { if (*elem == (target)) { found = true; break; } }); \
-    } while(0)                                    \
+    } while(0)                                                                            \
 
 /*  Filters the list in-place
  *  @param elem: a symbol, the name of the current value. It will get a pointer to the value.
  *  @param condition: a bool expression, should be used *elem in it.
  */
-#define list_filter(type, list, elem, condition)  \
-    do {                                            \
-        int last_found = 0;                         \
-        foreach(type, (list), elem, { if(condition) { (list).data[last_found] = *elem; last_found += 1; } }) \
-        (list).len = last_found;                 \
-    } while(0)                                      \
+#define list_filter(type, list, elem, condition)                                                                \
+    do {                                                                                                        \
+        int last_found = 0;                                                                                     \
+        foreach(type, (list), elem, { if(condition) { (list).data[last_found] = *elem; last_found += 1; } })    \
+        (list).len = last_found;                                                                                \
+    } while(0)                                                                                                  \
 
 
 // ------------------------------------------------------ //
