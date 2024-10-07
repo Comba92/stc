@@ -1,11 +1,11 @@
-#ifndef STC_H
-#define STC_H
+#ifndef STC_LIST_H
+#define STC_LIST_H
 
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
-
 #include "stc_mem.h"
+
 
 #define list_define(type, name)     \
     typedef struct {                \
@@ -107,38 +107,5 @@
         (list).len = last_found;                                                                                \
     } while(0)                                                                                                  \
 
-
-// ------------------------------------------------------ //
-// -----------------------Hashmap------------------------ //
-// ------------------------------------------------------ //
-
-#define map_define(type, name) \
-    typedef struct {                \
-        String key;                 \
-        type value;                 \
-        bool occupied;              \
-    } name##Pair;                   \
-    list_define(name##Pair, name);   \
-
-#define map_init(map, cap) \
-    do { \
-        (map).data = malloc(sizeof(*(map).data) * cap); \
-        memset((map).data, 0, sizeof(*(map).data)*cap); \
-        (map).len = 0; \
-        (map).capacity = (cap); \
-    } while(0)  \
-
-
-// string hashing alogorithm
-uint32_t djb2(uint8_t *buf, size_t buf_size)
-{
-    uint32_t hash = 5381;
-
-    for (size_t i = 0; i < buf_size; ++i) {
-        hash = ((hash << 5) + hash) + (uint32_t)buf[i]; /* hash * 33 + c */
-    }
-
-    return hash;
-}
 
 #endif
