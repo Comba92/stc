@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include "stc_mem.h"
 
-
 #define list_define(type, name)     \
     typedef struct {                \
         type* data;                 \
@@ -107,5 +106,13 @@
         (list).len = last_found;                                                                                \
     } while(0)                                                                                                  \
 
+
+#define list_map(old_type, old_list, new_type, new_list, elem, mapping) \
+    do {                                                                \
+        foreach(old_type, (old_list), elem, {                           \
+            new_type new_elem = (mapping);                              \
+            list_push(new_list, new_elem);                              \
+        })                                                              \
+    } while(0)                                                          \
 
 #endif
