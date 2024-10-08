@@ -88,6 +88,12 @@
         foreach(type, (list_from), it, { list_push((list_to), (*it)); });   \
     } while(0)                                                              \
 
+#define list_find(type, list, target, idx)                                          \
+    do {                                                                                  \
+        idx = -1;                                                                    \
+        foreach(type, (list), elem, { if (*elem == (target)) { idx = i; break; } }); \
+    } while(0)                                                                            \
+
 // @param found: an already defined bool value must be passed here, which will hold the result. 
 #define list_contains(type, list, target, found)                                          \
     do {                                                                                  \
