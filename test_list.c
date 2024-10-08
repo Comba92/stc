@@ -32,4 +32,14 @@ int main() {
     list_map(int, nums, char, chars, n, (char)(*n + 'a'));
     printf("Map works:\n");
     foreach(char, chars, n, { printf("%c\n", *n); })
+
+    Arena a = {0};
+    IntList numsa = {0};
+    printf("Arena push works:\n");
+    for (int i=0; i<5000; ++i) {
+        printf("Len: %d, Cap: %d, Val: %d\n", numsa.len, numsa.capacity, i);
+        arena_list_push(&a, numsa, i);
+    }
+    printf("New len = %d\n", numsa.len);
+    printf("%d\n", numsa.data[4000]);
 }

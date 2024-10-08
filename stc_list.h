@@ -26,11 +26,11 @@
  *  @param value: the value to push. Must be of the same type of the typed list. 
  */
 
-#define LIST_BASE_CAPACITY 32
+#define DEFAULT_LIST_CAP 32
 #define list_push(list, value)                                          \
     do {                                                                \
         if ( (list).len == 0 ) {                                        \
-            (list).capacity = LIST_BASE_CAPACITY;                       \
+            (list).capacity = DEFAULT_LIST_CAP;                         \
             (list).data = malloc(sizeof(value) * (list).capacity);      \
         }                                                               \
         if ( (list).len >= (list).capacity ) {                          \
@@ -41,15 +41,20 @@
         (list).len += 1;                                                \
     } while(0)
 
-#define arena_list_push(a, list, value)                                 \
+#define DEFAULT_ARENA_LIST_CAP 128
+#define arena_list_push(a, list, value)                                    \
     do {                                                                \
         if ( (list).len == 0 ) {                                        \
-            (list).capacity = LIST_BASE_CAPACITY;                       \
-            (list).data = arena_alloc((a), sizeof(value) * (list).capacity)                     \
+            (list).capacity = DEFAULT_ARENA_LIST_CAP;                   \
+            (list).data = arena_alloc((a), sizeof(value) * (list).capacity); \
         }                                                               \
         if ( (list).len >= (list).capacity ) {                          \
             (list).capacity *= 2;                                       \
-            (list).data = arena_realloc((a), (list).data, sizeof(value) * (list).capacity)      \
+            (list).data = arena_realloc(                                \
+                (a), (list).data,                                       \
+                sizeof(value) * (list).len,                             \
+                sizeof(value) * (list).capacity                         \
+            );                                                          \
         }                                                               \
         (list).data[(list).len] = (value);                              \
         (list).len += 1;                                                \
@@ -88,11 +93,16 @@
         foreach(type, (list_from), it, { list_push((list_to), (*it)); });   \
     } while(0)                                                              \
 
-#define list_find(type, list, target, idx)                                          \
-    do {                                                                                  \
-        idx = -1;                                                                    \
-        foreach(type, (list), elem, { if (*elem == (target)) { idx = i; break; } }); \
-    } while(0)                                                                            \
+#define arena_list_concat(a, type, list_to, list_from)                                  \
+    do {                                                                                \
+        foreach(type, (list_from), it, { arena_list_push((a), (list_to), (*it)); });    \
+    } while(0)    
+
+#define list_find(type, list, target, idx)                                              \
+do {                                                                                    \
+        idx = -1;                                                                       \
+        foreach(type, (list), elem, { if (*elem == (target)) { idx = i; break; } });    \
+} while(0)                                                                              \
 
 // @param found: an already defined bool value must be passed here, which will hold the result. 
 #define list_contains(type, list, target, found)                                          \
@@ -118,6 +128,14 @@
         foreach(old_type, (old_list), elem, {                           \
             new_type new_elem = (mapping);                              \
             list_push(new_list, new_elem);                              \
+        })                                                              \
+    } while(0)                                                          \
+
+#define arena_list_map(a, old_type, old_list, new_type, new_list, elem, mapping) \
+    do {                                                                \
+        foreach(old_type, (old_list), elem, {                           \
+            new_type new_elem = (mapping);                              \
+            arena_list_push((a), (new_list), (new_elem));               \
         })                                                              \
     } while(0)                                                          \
 

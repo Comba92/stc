@@ -37,28 +37,28 @@ name##Pair* map_##name##_get(name map, char* key) { \
     return NULL; \
 } \
 \
-void map_##name##_insert(name* map, name##Pair keyvalue) { \
-    size_t h = djb2(keyvalue.key)%map->capacity;  \
+void map_##name##_insert(name* map, name##Pair entry) { \
+    size_t h = djb2(entry.key)%map->capacity;  \
 \
     for (int i=0; \
         i<map->capacity \
         && map->data[h].occupied \
-        && strcmp(map->data[i].key, keyvalue.key) != 0; \
+        && strcmp(map->data[i].key, entry.key) != 0; \
         ++i) \
     { \
         h = (h+1)%map->capacity; \
     } \
 \
     if (map->data[h].occupied) { \
-        if (strcmp(map->data[h].key, keyvalue.key) != 0) { \
-            assert(false && "table overflow"); \
+        if (strcmp(map->data[h].key, entry.key) != 0) { \
+            assert("table overflow" && false); \
         } \
-        map->data[h].value = keyvalue.value; \
+        map->data[h].value = entry.value; \
     } \
 \
     map->data[h].occupied = true; \
-    map->data[h].key = keyvalue.key; \
-    map->data[h].value = keyvalue.value; \
+    map->data[h].key = entry.key; \
+    map->data[h].value = entry.value; \
     map->len += 1; \
 } \
 
