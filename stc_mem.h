@@ -105,7 +105,8 @@ void* arena_copy(Arena* a, void* data, size_t size) {
  * @param bytes: size to alloc
 */
 void* arena_realloc(Arena* a, void* old_data, size_t old_size, size_t new_size) {
-    if (old_size <= new_size) return old_data;
+    if (old_size >= new_size) return old_data;
+    
     void* new_data = arena_alloc(a, new_size);
     
     for (int i=0; i<old_size; ++i) {
@@ -149,7 +150,7 @@ struct Chunk {
 };
 
 typedef struct Pool {
-    Arena a;
+    Arena arena;
     size_t chunk_size;
     Chunk* curr;
 } Pool;
@@ -157,7 +158,7 @@ typedef struct Pool {
 #define DEFAULT_POOL_CHUNKS 128
 static void pool_build_freelist(Pool* p) {
     for (int i=0; i<DEFAULT_POOL_CHUNKS; ++i) {
-        Chunk* next = arena_alloc(&p->a, p->chunk_size);
+        Chunk* next = arena_alloc(&p->arena, p->chunk_size);
         next->next = p->curr;
         p->curr = next;
     }
@@ -167,7 +168,7 @@ Pool pool_new(size_t chunk_bytes) {
     Pool p = {0};
     p.chunk_size = sizeof(Chunk) + chunk_bytes;
     printf("[POOL]: allocated chunks of bytes: %d (total of %d bytes with header)\n", chunk_bytes, p.chunk_size);
-    p.a.curr = p.a.head = region_new(p.chunk_size * DEFAULT_POOL_CHUNKS);
+    p.arena.curr = p.arena.head = region_new(p.chunk_size * DEFAULT_POOL_CHUNKS);
 
     pool_build_freelist(&p);
 
@@ -176,11 +177,11 @@ Pool pool_new(size_t chunk_bytes) {
 
 void* pool_alloc(Pool* p) {
     if (p->curr == NULL) {
-        if (p->a.curr->next == NULL) {
-            p->a.curr->next = region_new(p->chunk_size * DEFAULT_POOL_CHUNKS);
+        if (p->arena.curr->next == NULL) {
+            p->arena.curr->next = region_new(p->chunk_size * DEFAULT_POOL_CHUNKS);
         }
 
-        p->a.curr = p->a.curr->next;
+        p->arena.curr = p->arena.curr->next;
         pool_build_freelist(p);
     }
 
@@ -190,7 +191,7 @@ void* pool_alloc(Pool* p) {
 }
 
 void pool_free(Pool* p, void* ptr) {
-    Region* curr = p->a.head;
+    Region* curr = p->arena.head;
     while (curr != NULL 
     && !(curr->data <= (char*)ptr && (char*)ptr < curr->data + curr->allocated)) {
         curr = curr->next;
@@ -203,7 +204,7 @@ void pool_free(Pool* p, void* ptr) {
 }
 
 void pool_reset(Pool* p) {
-    arena_reset(&p->a);
+    arena_reset(&p->arena);
     pool_build_freelist(p);
 }
 
