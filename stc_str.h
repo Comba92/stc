@@ -13,8 +13,9 @@
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 
 slice_define(char, str);
+list_define(char, String);
 list_define(str, StrList);
-list_define(int, IntList);
+list_define(String, StringList);
 
 typedef int (*CharPredicate)(int);
 // typedef bool (*CharPredicate)(char);
@@ -44,9 +45,9 @@ str str_empty() {
     };
 }
 
-str str_new(char* s, int start, int end) {
-    assert("[str_new]: start and end must be positive" && start >= 0 && end >= 0);
-    assert("[str_new]: start must be smaller than end" && start <= end);
+str str_slice(char* s, int start, int end) {
+    assert("[str_slice]: start and end must be positive" && start >= 0 && end >= 0);
+    assert("[str_slice]: start must be smaller than end" && start <= end);
     
     int len = strlen(s);
     start = MIN(start, len);
@@ -113,7 +114,7 @@ int str_match_while_rev(str s, CharPredicate p) {
 }
 
 int str_match(str s, str target) {
-    str window = str_new(s.data, 0, target.len);
+    str window = str_slice(s.data, 0, target.len);
 
     for(int i=0; i + target.len <= s.len; ++i) {
         if (str_eq(window, target)) return i;
@@ -126,7 +127,7 @@ int str_match(str s, str target) {
 IntList str_match_all(str s, str target) {
     IntList matches = {0};
 
-    str window = str_new(s.data, 0, target.len);
+    str window = str_slice(s.data, 0, target.len);
 
     for (int i=0; i + target.len <= s.len; ++i) {
         if (str_eq(window, target)) {
@@ -140,11 +141,11 @@ IntList str_match_all(str s, str target) {
 }
 
 str str_skip(str s, int n) {
-    return str_new(s.data, n, s.len);
+    return str_slice(s.data, n, s.len);
 }
 str str_skip_rev(str s, int n) {
     if (n > s.len) return str_empty();
-    return str_new(s.data, 0, s.len - n);
+    return str_slice(s.data, 0, s.len - n);
 }
 
 str str_skip_while(str s, CharPredicate p) {
@@ -169,11 +170,11 @@ str str_skip_until_match(str s, str target) {
 }
 
 str str_take(str s, int n) {
-    return str_new(s.data, 0, n);
+    return str_slice(s.data, 0, n);
 }
 str str_take_rev(str s, int n) {
     if (n > s.len) return s;
-    return str_new(s.data, s.len - n, s.len);
+    return str_slice(s.data, s.len - n, s.len);
 }
 
 str str_take_while(str s, CharPredicate p) {
@@ -197,11 +198,11 @@ str str_take_until_match(str s, str target) {
 }
 
 bool str_starts_with(str s, str start) {
-    str prefix = str_new(s.data, 0, start.len);
+    str prefix = str_slice(s.data, 0, start.len);
     return str_eq(prefix, start);
 }
 bool str_ends_with(str s, str end) {
-    str postfix = str_new(s.data, s.len - end.len, s.len);
+    str postfix = str_slice(s.data, s.len - end.len, s.len);
     return str_eq(postfix, end);
 }
 
@@ -229,44 +230,29 @@ double str_parse_float(str s) {
     return n;
 }
 
-StrList str_split(str s, char c) {
-    StrList ss = {0};
-
-    while (s.len > 0) {
-        int i = str_find(s, c);
-        if (i == -1) {
-            list_push(ss, str_new(s.data, 0, s.len));
-            break;
-        }
-        list_push(ss, str_new(s.data, 0, i));
-        s = str_new(s.data, i+1, s.len);
-    }
-
-    return ss;
-}
-StrList str_split_match(str s, str pattern) {
+StrList str_split(str s, str pattern) {
     StrList ss = {0};
 
     while (s.len > 0) {
         int i = str_match(s, pattern);
         if (i == -1) {
-            list_push(ss, str_new(s.data, 0, s.len));
+            list_push(ss, str_slice(s.data, 0, s.len));
             break;
         }
-        list_push(ss, str_new(s.data, 0, i));
-        s = str_new(s.data, i+pattern.len, s.len);
+        list_push(ss, str_slice(s.data, 0, i));
+        s = str_slice(s.data, i+pattern.len, s.len);
     }
 
     return ss;
 }
 
 StrList str_lines(str s) {
-    return str_split(s, '\n');
+    return str_split(s, str_from("\n"));
 }
 
-list_define(char, String);
 
-String str_with_cap(Arena* a, str s, int cap) {
+
+String string_with_cap(Arena* a, str s, int cap) {
     String res = {0};
     res.data = arena_alloc(a, cap);
     res.capacity = cap;
@@ -275,8 +261,8 @@ String str_with_cap(Arena* a, str s, int cap) {
     return res;
 }
 
-String str_arena(Arena* a, str s) {
-    return str_with_cap(a, s, s.len);
+String string_from(Arena* a, str s) {
+    return string_with_cap(a, s, s.len);
 }
 
 // Converts a String to a slice inplace
@@ -286,23 +272,24 @@ str STR(String S) {
 }
 
 // str str_view(String s) {
-//     return str_new(s.data, 0, s.len);
+//     return str_slice(s.data, 0, s.len);
 // }
 
-void str_append(Arena* a, String this, str other) {
-    foreach(char, other, c, { arena_list_push(&a, this, *c); })
+void str_append(Arena* a, String* this, str other) {
+    foreach(char, other, c, { arena_list_push(a, *this, *c); })
 }
 
 String str_concat(Arena* a, str this, str other) {
-    String res = str_arena(a, this);
-    str_append(a, res, other);
-    return res;    
+    String res = {0};
+    str_append(a, &res, this);
+    str_append(a, &res, other);
+    return res;
 }
 String str_repeat(Arena* a, str s, int n) {
-    String res = str_with_cap(a, s, s.len * n);
+    String res = string_with_cap(a, s, s.len * n);
     n--;
     while (n > 0) {
-        str_append(a, res, s);
+        str_append(a, &res, s);
         n--;
     }
 
@@ -311,18 +298,51 @@ String str_repeat(Arena* a, str s, int n) {
 
 String str_to_upper(Arena* a, str s) {
     String res = {0};
-    arena_list_map(a, char, s, char, res, c, (toupper(c)));
+    arena_list_map(a, char, s, char, res, c, (toupper(*c)));
     return res;
 }
 
 String str_to_lower(Arena* a, str s) {
     String res = {0};
-    arena_list_map(a, char, s, char, res, c, (tolower(c)));
+    arena_list_map(a, char, s, char, res, c, (tolower(*c)));
     return res;
 }
 
-// String str_replace(Arena* a, str s, str from, str to);
-// String str_replace_all(Arena* a, str s, str from, str to);
-// String str_join(Arena* a, StrList strs, char c);
+String str_replace(Arena* a, str s, str from, str to) {
+    int match = str_match(s, from);
+    if (match == -1) return string_from(a, s);
+
+    String res = {0};
+    str_append(a, &res, str_slice(s.data, 0, match));
+    str_append(a, &res, to);
+    str_append(a, &res, str_slice(s.data, match + from.len, s.len));
+    return res;
+}
+String str_replace_all(Arena* a, str s, str from, str to) {
+    IntList matches = str_match_all(s, from);
+
+    String res = {0};
+    int last = 0;
+    foreach(int, matches, match, {
+        str_append(a, &res, str_slice(s.data, last, *match));
+        str_append(a, &res, to);
+        last = *match + from.len;
+    })
+    str_append(a, &res, str_slice(s.data, last, s.len));
+
+    return res;
+}
+
+String str_join(Arena* a, StrList strs, str join) {
+    String ss = {0};
+
+    for(int i=0; i<strs.len-1; ++i) {
+        str_append(a, &ss, strs.data[i]);
+        str_append(a, &ss, join);
+    }
+    str_append(a, &ss, strs.data[strs.len-1]);
+
+    return ss;
+}
 
 #endif

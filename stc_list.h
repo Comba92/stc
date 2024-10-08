@@ -20,6 +20,10 @@
     } name;                         \
 
 
+list_define(int, IntList);
+list_define(float, FloatList);
+list_define(double, DoubleList);
+
 /*  Pushes the relative value type to the end of the typed list.
  *  Will be reallocated if capacity is full.
  *  @param list: the typed list to push on.
