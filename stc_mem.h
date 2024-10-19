@@ -21,26 +21,31 @@ struct Region {
     char data[];
 };
 
-#define DEFAULT_ALIGNMENT (2*sizeof(size_t))
-static size_t align(size_t ptr) {
+#define DEFAULT_ALIGNMENT 64
+static size_t align_forward(size_t ptr) {
     // If this modulo == 0, the address is aligned
     // Same as (p % a) but faster as 'a' is a power of two
-    size_t modulo = ptr & (DEFAULT_ALIGNMENT - 1);
-    if (modulo != 0) {
+    // size_t modulo = ptr & (DEFAULT_ALIGNMENT - 1);
+    // if (modulo != 0) {
         // If modulo is != 0, the addres is not aligned
-        ptr += DEFAULT_ALIGNMENT - modulo;
-    }
+        // Push to the next aligned value
+        // ptr += DEFAULT_ALIGNMENT - modulo;
+    // }
 
-    return ptr;
+    size_t aligned = (ptr + (DEFAULT_ALIGNMENT - 1)) & -DEFAULT_ALIGNMENT;
+    // size_t padding = -(ptr) & (DEFAULT_ALIGNMENT - 1);
+
+    return aligned;
 }
 
 /* Allocs a region of size cap, aligned to memory.
  * @param cap: size to alloc
 */
 static Region* region_new(size_t region_cap) {
-    size_t bytes = sizeof(Region) + region_cap*sizeof(char);
-    bytes = align(bytes);
+    size_t bytes = sizeof(Region) + region_cap;
+    bytes = align_forward(bytes);
     Region* r = (Region*) malloc(bytes);
+    
     assert("malloc failed to allocate region" && r != NULL);
 
     printf("[ARENA]: allocated region of size %ld bytes (total of %ld bytes with header and alignment)\n", region_cap, bytes);
@@ -144,6 +149,8 @@ void arena_free(Arena* a) {
     a->head = a->curr = NULL;
 }
 
+
+
 typedef struct Chunk Chunk;
 struct Chunk {
     Chunk* next;
@@ -167,7 +174,6 @@ static void pool_build_freelist(Pool* p) {
 Pool pool_new(size_t chunk_bytes) {
     Pool p = {0};
     p.chunk_size = sizeof(Chunk) + chunk_bytes;
-    printf("[POOL]: allocated chunks of bytes: %d (total of %d bytes with header)\n", chunk_bytes, p.chunk_size);
     p.arena.curr = p.arena.head = region_new(p.chunk_size * DEFAULT_POOL_CHUNKS);
 
     pool_build_freelist(&p);

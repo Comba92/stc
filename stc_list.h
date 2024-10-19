@@ -30,6 +30,13 @@ list_define(double, DoubleList);
  *  @param value: the value to push. Must be of the same type of the typed list. 
  */
 
+#define list_with_cap(type, cap) \
+    { \
+        .data = malloc(cap * sizeof(type)), \
+        .len = 0, \
+        .capacity = cap, \
+    } \
+
 #define DEFAULT_LIST_CAP 32
 #define list_push(list, value)                                          \
     do {                                                                \
@@ -82,8 +89,8 @@ list_define(double, DoubleList);
  *  @param elem: a symbol, the name of the current value. It will get a pointer to the value.
  *  @param body: a statement to execute for each iteration.
  */
-#define foreach(type, list, elem, body)     \
-    for (size_t i = 0;                      \
+#define list_foreach(type, list, elem, body)     \
+    for (int i = 0;                      \
          i < (list).len;                    \
          ++i)                               \
     {                                       \
@@ -94,25 +101,25 @@ list_define(double, DoubleList);
 // Concats list_from to list_to in-place
 #define list_concat(type, list_to, list_from)                               \
     do {                                                                    \
-        foreach(type, (list_from), it, { list_push((list_to), (*it)); });   \
+        list_foreach(type, (list_from), it, { list_push((list_to), (*it)); });   \
     } while(0)                                                              \
 
 #define arena_list_concat(a, type, list_to, list_from)                                  \
     do {                                                                                \
-        foreach(type, (list_from), it, { arena_list_push((a), (list_to), (*it)); });    \
+        list_foreach(type, (list_from), it, { arena_list_push((a), (list_to), (*it)); });    \
     } while(0)    
 
 #define list_find(type, list, target, idx)                                              \
 do {                                                                                    \
         idx = -1;                                                                       \
-        foreach(type, (list), elem, { if (*elem == (target)) { idx = i; break; } });    \
+        list_foreach(type, (list), elem, { if (*elem == (target)) { idx = i; break; } });    \
 } while(0)                                                                              \
 
 // @param found: an already defined bool value must be passed here, which will hold the result. 
 #define list_contains(type, list, target, found)                                          \
     do {                                                                                  \
         found = false;                                                                    \
-        foreach(type, (list), elem, { if (*elem == (target)) { found = true; break; } }); \
+        list_foreach(type, (list), elem, { if (*elem == (target)) { found = true; break; } }); \
     } while(0)                                                                            \
 
 /*  Filters the list in-place
@@ -122,14 +129,14 @@ do {                                                                            
 #define list_filter(type, list, elem, condition)                                                                \
     do {                                                                                                        \
         int last_found = 0;                                                                                     \
-        foreach(type, (list), elem, { if(condition) { (list).data[last_found] = *elem; last_found += 1; } })    \
+        list_foreach(type, (list), elem, { if(condition) { (list).data[last_found] = *elem; last_found += 1; } })    \
         (list).len = last_found;                                                                                \
     } while(0)                                                                                                  \
 
 
 #define list_map(old_type, old_list, new_type, new_list, elem, mapping) \
     do {                                                                \
-        foreach(old_type, (old_list), elem, {                           \
+        list_foreach(old_type, (old_list), elem, {                           \
             new_type new_elem = (mapping);                              \
             list_push(new_list, new_elem);                              \
         })                                                              \
@@ -137,7 +144,7 @@ do {                                                                            
 
 #define arena_list_map(a, old_type, old_list, new_type, new_list, elem, mapping) \
     do {                                                                \
-        foreach(old_type, (old_list), elem, {                           \
+        list_foreach(old_type, (old_list), elem, {                           \
             new_type new_elem = (mapping);                              \
             arena_list_push((a), (new_list), (new_elem));               \
         })                                                              \
