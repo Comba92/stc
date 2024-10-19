@@ -5,31 +5,40 @@
 #include <assert.h>
 #include <stdbool.h>
 #include "stc_list.h"
+#include "stc_str.h"
 
-size_t djb2(char* str)
+size_t djb2(str s)
 {
     size_t hash = 5381;
-    int c;
 
-    while (c = *str++)
-        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+    for(int i=0; i<s.len; ++i)
+        hash = ((hash << 5) + hash) + s.data[i]; /* hash * 33 + c */
 
     return hash;
 }
 
+#define map_define(type, name) map_entry_define(type, name, name##Pair)
 
-#define map_define(type, name) \
+#define map_entry_define(type, map_name, entry_name) \
     typedef struct { \
-        char* key; \
+        str key; \
         type value; \
         bool occupied; \
-    } name##Pair; \
-    list_define(name##Pair, name); \
+    } entry_name; \
+    list_define(entry_name, map_name); \
 \
-name##Pair* map_##name##_get(name map, char* key) { \
+entry_name map_##entry_name##_new(str key, type value) { \
+    return (entry_name) { \
+        .key = key, \
+        .value = value, \
+        .occupied = true \
+    }; \
+} \
+\
+entry_name* map_##map_name##_get(map_name map, str key) { \
     for (int i=0; i<map.capacity; ++i) { \
         if (!map.data[i].occupied) continue; \
-        if (strcmp(map.data[i].key, key) == 0) { \
+        if (str_cmp(map.data[i].key, key) == 0) { \
             return &map.data[i]; \
         } \
     } \
@@ -37,35 +46,46 @@ name##Pair* map_##name##_get(name map, char* key) { \
     return NULL; \
 } \
 \
-void map_##name##_insert(name* map, name##Pair entry) { \
-    size_t h = djb2(entry.key)%map->capacity;  \
-\
-    for (int i=0; \
-        i<map->capacity \
-        && map->data[h].occupied \
-        && strcmp(map->data[i].key, entry.key) != 0; \
+void map_##map_name##_insert(map_name* map, entry_name keyvalue) { \
+    size_t h = djb2(keyvalue.key)%map->capacity;  \
+    int i; \
+    for (i=0; \
+        i<map->capacity && \
+        map->data[h].occupied && \
+        str_cmp(map->data[i].key, keyvalue.key) != 0;\
         ++i) \
     { \
         h = (h+1)%map->capacity; \
     } \
 \
     if (map->data[h].occupied) { \
-        if (strcmp(map->data[h].key, entry.key) != 0) { \
-            assert("table overflow" && false); \
+        if (str_cmp(map->data[h].key, keyvalue.key) != 0) { \
+            printf("[MAP] table overflow, reallocating\n"); \
+            map_name new; \
+            map_init(new, map->capacity*2); \
+            printf("[MAP] New map allocated with cap %lld\n", new.capacity); \
+            for(int i=0; i<map->capacity; ++i) { \
+                entry_name e = map->data[i]; \
+                map_##map_name##_insert(&new, e); \
+            } \
+            map_##map_name##_insert(&new, keyvalue); \
+            map->data = new.data; \
+            map->len = new.len; \
+            map->capacity = new.capacity; \
+            return; \
         } \
-        map->data[h].value = entry.value; \
+        map->data[h].value = keyvalue.value; \
     } \
 \
     map->data[h].occupied = true; \
-    map->data[h].key = entry.key; \
-    map->data[h].value = entry.value; \
+    map->data[h].key = keyvalue.key; \
+    map->data[h].value = keyvalue.value; \
     map->len += 1; \
 } \
 
 #define map_init(map, cap) \
     do { \
-        (map).data = malloc(sizeof(*(map).data)*cap); \
-        memset((map).data, 0, sizeof(*(map).data)*cap); \
+        (map).data = calloc((cap), sizeof(*(map).data)); \
         (map).len = 0; \
         (map).capacity = (cap); \
     } while(0)  \
