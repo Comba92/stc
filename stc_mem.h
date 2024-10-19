@@ -48,7 +48,7 @@ static Region* region_new(size_t region_cap) {
     
     assert("malloc failed to allocate region" && r != NULL);
 
-    printf("[ARENA]: allocated region of size %ld bytes (total of %ld bytes with header and alignment)\n", region_cap, bytes);
+    printf("[ARENA]: allocated region of size %lld bytes (total of %lld bytes with header and alignment)\n", region_cap, bytes);
 
     r->allocated = 0;
     r->capacity = region_cap;
