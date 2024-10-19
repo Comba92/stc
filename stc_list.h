@@ -89,8 +89,8 @@ list_define(double, DoubleList);
  *  @param elem: a symbol, the name of the current value. It will get a pointer to the value.
  *  @param body: a statement to execute for each iteration.
  */
-#define list_foreach(type, list, elem, body)     \
-    for (int i = 0;                      \
+#define list_foreach(type, list, elem, body)\
+    for (int i = 0;                         \
          i < (list).len;                    \
          ++i)                               \
     {                                       \
@@ -109,6 +109,7 @@ list_define(double, DoubleList);
         list_foreach(type, (list_from), it, { arena_list_push((a), (list_to), (*it)); });    \
     } while(0)    
 
+// @param idx: an already defined int value must be passed here, which will hold the index of the found result.
 #define list_find(type, list, target, idx)                                              \
 do {                                                                                    \
         idx = -1;                                                                       \
@@ -124,7 +125,7 @@ do {                                                                            
 
 /*  Filters the list in-place
  *  @param elem: a symbol, the name of the current value. It will get a pointer to the value.
- *  @param condition: a bool expression, should be used *elem in it.
+ *  @param condition: an expression which returns bool, should be used *elem in it.
  */
 #define list_filter(type, list, elem, condition)                                                                \
     do {                                                                                                        \
@@ -133,7 +134,14 @@ do {                                                                            
         (list).len = last_found;                                                                                \
     } while(0)                                                                                                  \
 
-
+/*  Maps a list to a new list
+ *  @param: old_type: type of the source list
+ *  @param: old_list: source list
+ *  @param: new_type: type of the new mapped list
+ *  @param: new_list: new mapped list 
+ *  @param elem: a symbol, the name of the current value. It will get a pointer to the value.
+ *  @param mapping: an expression which returns a new_type value, should be used *elem in it.
+ */
 #define list_map(old_type, old_list, new_type, new_list, elem, mapping) \
     do {                                                                \
         list_foreach(old_type, (old_list), elem, {                           \

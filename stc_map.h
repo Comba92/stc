@@ -17,7 +17,7 @@ size_t djb2(str s)
     return hash;
 }
 
-#define map_define(type, name) map_entry_define(type, name, name##Pair)
+#define map_define(type, name) map_entry_define(type, name, name##Entry)
 
 #define map_entry_define(type, map_name, entry_name) \
     typedef struct { \
@@ -46,40 +46,40 @@ entry_name* map_##map_name##_get(map_name map, str key) { \
     return NULL; \
 } \
 \
-void map_##map_name##_insert(map_name* map, entry_name keyvalue) { \
-    size_t h = djb2(keyvalue.key)%map->capacity;  \
+void map_##map_name##_insert(map_name* map, str key, type value) { \
+    size_t h = djb2(key)%map->capacity;  \
     int i; \
     for (i=0; \
         i<map->capacity && \
         map->data[h].occupied && \
-        str_cmp(map->data[i].key, keyvalue.key) != 0;\
+        str_cmp(map->data[i].key, key) != 0;\
         ++i) \
     { \
         h = (h+1)%map->capacity; \
     } \
 \
     if (map->data[h].occupied) { \
-        if (str_cmp(map->data[h].key, keyvalue.key) != 0) { \
+        if (str_cmp(map->data[h].key, key) != 0) { \
             printf("[MAP] table overflow, reallocating\n"); \
             map_name new; \
             map_init(new, map->capacity*2); \
             printf("[MAP] New map allocated with cap %lld\n", new.capacity); \
             for(int i=0; i<map->capacity; ++i) { \
                 entry_name e = map->data[i]; \
-                map_##map_name##_insert(&new, e); \
+                map_##map_name##_insert(&new, e.key, e.value); \
             } \
-            map_##map_name##_insert(&new, keyvalue); \
+            map_##map_name##_insert(&new, key, value); \
             map->data = new.data; \
             map->len = new.len; \
             map->capacity = new.capacity; \
             return; \
         } \
-        map->data[h].value = keyvalue.value; \
+        map->data[h].value = value; \
     } \
 \
     map->data[h].occupied = true; \
-    map->data[h].key = keyvalue.key; \
-    map->data[h].value = keyvalue.value; \
+    map->data[h].key = key; \
+    map->data[h].value = value; \
     map->len += 1; \
 } \
 
@@ -89,5 +89,20 @@ void map_##map_name##_insert(map_name* map, entry_name keyvalue) { \
         (map).len = 0; \
         (map).capacity = (cap); \
     } while(0)  \
+
+#define map_free(map) \
+    do { \
+        free((map).data); \
+        (map).len = 0; \
+        (map).capacity = 0; \
+    } while(0) \
+
+#define map_foreach(type, map, elem, body) \
+    for(int i=0; i<(map).capacity; ++i) { \
+        type##Entry* elem = &(map).data[i]; \
+        if (elem->occupied) { \
+            body; \
+        } \
+    } \
 
 #endif

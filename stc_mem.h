@@ -11,7 +11,7 @@
  * @param next: pointer to the next region of the arena 
  * @param allocated: how many bytes of the region are used
  * @param capacity: size in bytes of the region
- * @param data: the allocatet data
+ * @param data: the allocated data
  */
 typedef struct Region Region;
 struct Region {
@@ -21,7 +21,7 @@ struct Region {
     char data[];
 };
 
-#define DEFAULT_ALIGNMENT 64
+#define DEFAULT_ALIGNMENT 8
 static size_t align_forward(size_t ptr) {
     // If this modulo == 0, the address is aligned
     // Same as (p % a) but faster as 'a' is a power of two
@@ -102,7 +102,7 @@ void* arena_copy(Arena* a, void* data, size_t size) {
 }
 
 
-/* Reallocs some data into the arena, copying it, and giving back the reallocated data pointer.
+/* Reallocs some data into a new arena, copying it, and giving back the reallocated data pointer.
  * @param a: the arena, might be initialized
  * @param old_data: the data to realloc
  * @param: old_size: the old size of the data to realloc
@@ -148,7 +148,6 @@ void arena_free(Arena* a) {
 
     a->head = a->curr = NULL;
 }
-
 
 
 typedef struct Chunk Chunk;
