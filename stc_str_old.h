@@ -35,7 +35,7 @@ Str slice_empty() {
 // Returns a new heap-allocated ZString, which must be freed.
 char* cstr(Str s) {
     char* ptr = malloc(sizeof(char) * (s.len+1));
-    foreach(char, s, c, {ptr[i] = *c; });
+    list_foreach(char, s, c, {ptr[i] = *c; });
     ptr[s.len] = '\0';
     return ptr;
 }
@@ -111,7 +111,7 @@ int str_cmp(Str a, Str b) {
 }
 
 int str_find(Str s, char target) {
-    foreach(char, s, c, { if (*c == target) return i; });
+    list_foreach(char, s, c, { if (*c == target) return i; });
     return -1;
 }
 
@@ -133,7 +133,7 @@ Str str_take_right(Str s, size_t len) {
 
 Str str_take_while(Str s, CharPredicate p) {
     size_t len = 0;
-    foreach(char, s, c, { if (p(*c)) { break; } len+=1; });
+    list_foreach(char, s, c, { if (p(*c)) { break; } len+=1; });
     return str_take_left(s, len);
 }
 
@@ -317,7 +317,7 @@ String str_from_cstring(char* s) {
 
 String str_from_slice(Str s) {
     String res = {0};
-    foreach(char, s, c, { list_push(res, *c); });
+    list_foreach(char, s, c, { list_push(res, *c); });
 
     res.slice = slice_from_str(res);
     return res;
@@ -330,7 +330,7 @@ void str_free(String* s) {
 //TODO: convert all String arguments to slices?
 String str_copy(String s) {
     String res = {0};
-    foreach(char, s, c, { list_push(res, *c); });
+    list_foreach(char, s, c, { list_push(res, *c); });
 
     res.slice = slice_from_str(res);
     return res;
@@ -348,7 +348,7 @@ String str_insert(String src, size_t start, Str other) {
     String res = {0};
     size_t i = 0;
     while (i < start) { list_push(res, src.data[i++]); }
-    foreach(char, other, c, { list_push(res, *c); });
+    list_foreach(char, other, c, { list_push(res, *c); });
     while (i < src.len) { list_push(res, src.data[i++]); }
 
     res.slice = slice_from_str(res);
@@ -393,7 +393,7 @@ bool str_erase(String* dst, int start, int len)  {
 
 String str_map(Str s, CharPredicate p) {
     String res = {0};
-    foreach(char, s, c, { *c = (char) p((int)*c); list_push(res, *c); });
+    list_foreach(char, s, c, { *c = (char) p((int)*c); list_push(res, *c); });
     
     res.slice = slice_from_str(res);
     return res;
@@ -451,7 +451,7 @@ String str_replace_all(String s, Str target, Str replacing) {
 String str_join(StrList sl, char join) {
     String res = {0};
 
-    foreach(Str, sl, s, {
+    list_foreach(Str, sl, s, {
         list_concat(char, res, *s);
         list_push(res, join);
     });

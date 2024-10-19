@@ -63,7 +63,7 @@ int main() {
     printf("%d\n", str_match(hello, ll));
     printf("%d\n", str_match(hello, str("fag")));
 
-    foreach(int, str_match_all(totrim, ds), s, {
+    list_foreach(int, str_match_all(totrim, ds), s, {
         printf("Match: %d\n", *s);
     });
 
@@ -74,12 +74,12 @@ int main() {
 
     StrList lines = str_lines(str("kill\nyour\nself!"));
 
-    foreach(Str, lines, s, {
+    list_foreach(Str, lines, s, {
         str_msg("Lines:", *s);
     });
 
     StrList splitted = str_split(hello, 'l');
-    foreach(Str, splitted, s, {
+    list_foreach(Str, splitted, s, {
         str_msg("Split:", *s);
     });
 

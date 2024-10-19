@@ -23,7 +23,9 @@ int main() {
     res_dbg(str_eq_ignorecase(str_from("ASS"), str_from("ass")));
     res_dbg(str_cmp(str_from("ass"), str_from("bass")));
     res_dbg(str_cmp(str_from("bass"), str_from("ass")));
+    res_dbg(str_cmp(str_from("ass"), str_from("asshole")));
     res_dbg(str_cmp(str_from("ass"), str_from("ass")));
+
 
     res_dbg(str_find(s, 'W'));
     res_dbg(str_contains(s, 'W'));
@@ -84,13 +86,13 @@ int main() {
     res_dbg(str_parse_int(str_from("1234a")));
 
     StrList ss1 = str_split(str_from("abc,,bcd,cde,defg"), str_from(","));
-    foreach(str, ss1, s, { str_dbg(*s); })
+    list_foreach(str, ss1, s, { str_dbg(*s); })
 
     StrList ss2 = str_lines(str_from("abc\nbcd\ncde\ndefg"));
-    foreach(str, ss2, s, { str_dbg(*s); })
+    list_foreach(str, ss2, s, { str_dbg(*s); })
 
     StrList ss3 = str_split(str_from("abcbbccbcd"), str_from("bc"));
-    foreach(str, ss3, s, { str_dbg(*s); })
+    list_foreach(str, ss3, s, { str_dbg(*s); })
 
     printf("\n");
 
@@ -119,6 +121,12 @@ int main() {
     list_push(sl, str_from("ciao"));
 
     str_dbg(STR(str_join(&a, sl, str_from(","))));
+
+    printf("ZStr test: %s\n", zstr(str_from("Fuck you nigger!")));
+
+    str_dbg(STR(str_format(&a, "Kys %d times stupid faggot %s", 100, "killer")));
+    str_dbg(STR(int_to_string(&a, 20)));
+    str_dbg(STR(float_to_string(&a, 20.23)));
 
     arena_free(&a);
 }
