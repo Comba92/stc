@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdarg.h>
 
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
@@ -79,7 +80,6 @@ int str_cmp(str a, str b) {
 
     return a.len - b.len;
 }
-
 
 int str_find(str s, char c) {
     int idx;
@@ -250,7 +250,6 @@ StrList str_lines(str s) {
 }
 
 
-
 String string_with_cap(Arena* a, str s, int cap) {
     String res = {0};
     cap = cap+1;
@@ -273,6 +272,30 @@ str STR(String S) {
 
 str str_view(String s) {
     return str_slice(s.data, 0, s.len);
+}
+
+String str_format(Arena* a, char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+
+    int buf_len = strlen(fmt) * 3;
+    char* buf = malloc(buf_len);
+    vsnprintf(buf, buf_len, fmt, args);
+
+    String res = string_from(a, str_from(buf));
+
+    free(buf);
+    va_end(args);
+
+    return res;
+}
+
+String int_to_string(Arena* a, int n) {
+    return str_format(a, "%d", n);
+}
+
+String float_to_string(Arena* a, double n) {
+    return str_format(a, "%f", n);
 }
 
 void str_append(Arena* a, String* this, str other) {
@@ -355,6 +378,10 @@ char* zstring(String s) {
 
 char* zstr(str s) {
     return zstring(string_from(&dbg_arena, s));
+}
+
+void zstrings_free() {
+    arena_free(&dbg_arena);
 }
 
 #endif
