@@ -21,15 +21,6 @@ typedef int (*CharPredicate)(int);
 // typedef bool (*CharPredicate)(char);
 int isnotblank(int c) { return !isblank(c); }
 
-
-// THIS NEEDS TO BE FREED!
-char* cstr(str s) {
-    char* res = malloc(s.len + 1);
-    foreach(char, s, c, { res[i] = *c; })
-    res[s.len] = '\0';
-    return res;
-}
-
 str str_from(char* s) {
     str res = {
         .data = s,
@@ -86,7 +77,7 @@ int str_cmp(str a, str b) {
         }
     }
 
-    return 0;
+    return a.len - b.len;
 }
 
 
@@ -102,7 +93,7 @@ bool str_contains(str s, char c) {
 
 int str_match_while(str s, CharPredicate p) {
     int idx = -1;
-    foreach(char, s, c, { if (p(*c)) { idx = i; break; } })
+    list_foreach(char, s, c, { if (p(*c)) { idx = i; break; } })
     return idx;
 }
 
@@ -216,6 +207,14 @@ str str_trim(str s) {
     return str_trim_end(str_trim_start(s));
 }
 
+// THIS NEEDS TO BE FREED!
+char* cstr(str s) {
+    char* res = malloc(s.len + 1);
+    list_foreach(char, s, c, { res[i] = *c; })
+    res[s.len] = '\0';
+    return res;
+}
+
 int str_parse_int(str s) {
     char* buf = cstr(s);
     int n = atoi(buf);
@@ -254,6 +253,7 @@ StrList str_lines(str s) {
 
 String string_with_cap(Arena* a, str s, int cap) {
     String res = {0};
+    cap = cap+1;
     res.data = arena_alloc(a, cap);
     res.capacity = cap;
     res.len = s.len;
@@ -271,12 +271,12 @@ str STR(String S) {
     return *((str*) (&S));
 }
 
-// str str_view(String s) {
-//     return str_slice(s.data, 0, s.len);
-// }
+str str_view(String s) {
+    return str_slice(s.data, 0, s.len);
+}
 
 void str_append(Arena* a, String* this, str other) {
-    foreach(char, other, c, { arena_list_push(a, *this, *c); })
+    list_foreach(char, other, c, { arena_list_push(a, *this, *c); })
 }
 
 String str_concat(Arena* a, str this, str other) {
@@ -318,12 +318,13 @@ String str_replace(Arena* a, str s, str from, str to) {
     str_append(a, &res, str_slice(s.data, match + from.len, s.len));
     return res;
 }
+
 String str_replace_all(Arena* a, str s, str from, str to) {
     IntList matches = str_match_all(s, from);
 
     String res = {0};
     int last = 0;
-    foreach(int, matches, match, {
+    list_foreach(int, matches, match, {
         str_append(a, &res, str_slice(s.data, last, *match));
         str_append(a, &res, to);
         last = *match + from.len;
@@ -343,6 +344,17 @@ String str_join(Arena* a, StrList strs, str join) {
     str_append(a, &ss, strs.data[strs.len-1]);
 
     return ss;
+}
+
+static Arena dbg_arena = {0};
+
+char* zstring(String s) {
+    arena_list_push(&dbg_arena, s, '\0');
+    return s.data;
+}
+
+char* zstr(str s) {
+    return zstring(string_from(&dbg_arena, s));
 }
 
 #endif
